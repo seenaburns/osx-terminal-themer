@@ -57,43 +57,46 @@ def xml_to_bplist(data):
 
     return stdout
 
-def unpackage_theme(pl_string):
-    theme_pl = plistlib.readPlistFromString(pl_string)
-
-    # Extract plist for each encoded key/value
-    for k,v in theme_pl.iteritems():
-        if k not in bplist_keys:
-            continue
-
-        # Convert complex entries (bplists) into xml
-        theme_pl[k] = bplist_to_xml(v.data)
-        theme_pl[k] = plistlib.readPlistFromString(theme_pl[k])
-
-        # Also strip plistlib.Data for json output
-        recursive_unwrap_data(theme_pl[k])
-
-    return json.dumps(theme_pl, indent=4)
-
-def recursive_wrap_data(plist):
-    # Wrap any NSData objects in plistlb.data for plistlib write
+def wrap_data(plist):
+    # Wrap any data objects in plistlb.data
+    # Assumes unwrap_data ensures output format {'data': content}
     plist_iter = lambda x: x if isinstance(x, dict) else range(len(x))
     
     for key in plist_iter(plist):
-        if key == 'data' or key in bplist_keys:
-            plist[key] = plistlib.Data(plist[key])
+        data = None
+        if isinstance(plist[key], dict):
+            data = plist[key].get('data', None)
+        if data is not None:
+            plist[key] = plistlib.Data(data)
         elif isinstance(plist[key], dict) or isinstance(plist[key], list):
-            recursive_wrap_data(plist[key])
+            wrap_data(plist[key])
 
-def recursive_unwrap_data(plist):
-    # Unpackage plistlib.Data to preserve json output
+def unwrap_data(plist):
+    # Recursively find plistlib.Data objects and turn them into
+    # dicts with format {'data': content}
     plist_iter = lambda x: x if isinstance(x, dict) else range(len(x))
     
     for key in plist_iter(plist):
         if isinstance(plist[key], plistlib.Data):
             plist[key] = {'data': plist[key].data}
         elif isinstance(plist[key], dict) or isinstance(plist[key], list):
-            recursive_unwrap_data(plist[key])
+            unwrap_data(plist[key])
 
+
+def unpackage_theme(pl_string):
+    theme_pl = plistlib.readPlistFromString(pl_string)
+    unwrap_data(theme_pl)
+
+    # Extract plist for each bplist encoded key/value
+    for k,v in theme_pl.iteritems():
+        if k not in bplist_keys:
+            continue
+        v_plist = bplist_to_xml(v['data'])
+        v_plist = plistlib.readPlistFromString(v_plist)
+        unwrap_data(v_plist)
+        theme_pl[k]['data'] = v_plist 
+
+    return json.dumps(theme_pl, indent=4)
 
 def repackage_theme(json_string):
     theme_json = json.loads(json_string)
@@ -105,13 +108,13 @@ def repackage_theme(json_string):
             continue
 
         # Convert any data objects to plistlib.data
-        recursive_wrap_data(v)
+        wrap_data(v['data'])
 
-        v_plist = plistlib.writePlistToString(v)
+        v_plist = plistlib.writePlistToString(v['data'])
         v_plist = xml_to_bplist(v_plist)
-        theme_json[k] = v_plist
-    
-    recursive_wrap_data(theme_json)
+        theme_json[k]['data'] = v_plist
+
+    wrap_data(theme_json)
 
     return plistlib.writePlistToString(theme_json)
 
