@@ -1,9 +1,10 @@
 """
-Manipulate OS X Terminal's theme files (.terminal file
-extension). 
 
-- Convert .terminal plist format and a decoded json format
-- Set specific settings from the command line
+DESCRIPTION
+  Manipulate OS X Terminal's theme files (.terminal file extension). 
+
+  - Convert .terminal plist format and a decoded json format
+  - Set specific settings from the command line
 
 """
 
@@ -70,30 +71,54 @@ def xml_to_bplist(data):
     return stdout
 
 if __name__ == '__main__':
-    convert = None
-    set_vars = None
-    description=__doc__
+    # Setup argument parser
+    # Set formatter class to be RawTextHelper with wider fill to format
+    #   usage text properly (enable __doc__ newlines, wider printing)
     parser = argparse.ArgumentParser(
-        description=description,
+        description=__doc__,
         prog='osxterminalthemer.py',
-        formatter_class=lambda prog: argparse.RawTextHelpFormatter(prog,2,72))
-    
-    parser.add_argument("--convert", type=str,
-                        default=None,
-                        choices=["json", "terminal"],
-                        help='Convert input to the indicated format')
-    # parser.add_argument("in_file", type=str, nargs='?',
-    #                    help="Input file name")
-    parser.add_argument('--set', action='append', dest='set_vars',
-                        default=None,
-                        help="Set specific value from commandline.\nFollow format k=\"v\" to set key k as value v.\n(See description for accepted keys)")
+        formatter_class= \
+          lambda prog: argparse.RawTextHelpFormatter(prog,2,72))
+    parser.add_argument(
+        "--convert",
+        type=str,
+        default=None,
+        choices=["json", "terminal"],
+        help='Convert input to the indicated format')
+    parser.add_argument(
+        "in_file",
+        type=str,
+        nargs='?',
+        default=None,
+        help="Optionally provide input file name instead of \n" +
+             "feeding to stdin")
+    parser.add_argument(
+        '--set',
+        action='append',
+        dest='set_vars',
+        default=None,
+        help="Set specific value from commandline.\n" + \
+             "Follow format k=\"v\" to set key k as value v.\n" + \
+             "(See description for accepted keys)")
+
     args = parser.parse_args()
 
-    if (convert is None) and (set_vars is None):
-        print __doc__
+    # Fail if no action specified
+    if (args.convert is None) and (args.set_vars is None):
+        print 'No action specified! (convert or set)\n'
         parser.print_help()
         sys.exit()
-    
-    print args
 
+    # Extract contents either from input file or stdin
+    in_data = ""
+    if args.in_file is not None:
+        with open(args.in_file, 'r') as f:
+            in_data = f.read()
+    else:
+        in_data = sys.stdin.read()
+
+    if args.convert is not None:
+        if args.convert == "json":            
+            print unpackage_theme(in_data)
+    
     # unpackage_theme(contents)
