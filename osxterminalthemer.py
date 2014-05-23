@@ -167,9 +167,8 @@ if __name__ == '__main__':
 
     if args.convert is not None:
         if args.convert == "json":            
-            print unpackage_theme(in_data)
+            sys.stdout.write(unpackage_theme(in_data))
 
         if args.convert == "terminal":
-            print repackage_theme(in_data)
+            sys.stdout.write(repackage_theme(in_data))
     
-    # unpackage_theme(contents)
