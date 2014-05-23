@@ -37,7 +37,7 @@ def unpackage_theme(pl_string):
         bplist = bplist_to_xml(v.data)
         theme_pl[k] = plistlib.readPlistFromString(bplist)
 
-    print json.dumps(theme_pl, default=lambda o: o.__dict__, indent=4)
+    return json.dumps(theme_pl, default=lambda o: o.__dict__, indent=4)
     
 def bplist_to_xml(data):
     cmd = "plutil -convert xml1 - -o -"
@@ -50,7 +50,14 @@ def bplist_to_xml(data):
     return stdout
 
 def xml_to_bplist(data):
-    pass
+    cmd = "plutil -convert binary1 - -o -"
+    p = subprocess.Popen(cmd, shell=True,
+                         stdin=subprocess.PIPE,
+                         stdout=subprocess.PIPE)
+    p.stdin.write(data)
+    stdout, stderr = p.communicate()
+
+    return stdout
 
 if __name__ == '__main__':
     f = open(sys.argv[1], 'r')
