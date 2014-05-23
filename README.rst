@@ -6,7 +6,8 @@ Manipulate OS X terminal theme files (.terminal).
 - Convert between terminal format and json
 - Set specific values from the commandline
 
-::
+---
+
     usage: osxterminalthemer.py [-h] [--convert {json,terminal}]
                                      [--set SET_VARS]
                                      [in_file]
