@@ -1,7 +1,17 @@
+"""
+Manipulate OS X Terminal's theme files (.terminal file
+extension). 
+
+- Convert .terminal plist format and a decoded json format
+- Set specific settings from the command line
+
+"""
+
 import sys
 import subprocess
 import plistlib
 import json
+import argparse
 
 bplist_keys = ['ANSIBlackColor',
                'ANSIBlueColor',
@@ -60,7 +70,30 @@ def xml_to_bplist(data):
     return stdout
 
 if __name__ == '__main__':
-    f = open(sys.argv[1], 'r')
-    contents = f.read()
+    convert = None
+    set_vars = None
+    description=__doc__
+    parser = argparse.ArgumentParser(
+        description=description,
+        prog='osxterminalthemer.py',
+        formatter_class=lambda prog: argparse.RawTextHelpFormatter(prog,2,72))
+    
+    parser.add_argument("--convert", type=str,
+                        default=None,
+                        choices=["json", "terminal"],
+                        help='Convert input to the indicated format')
+    # parser.add_argument("in_file", type=str, nargs='?',
+    #                    help="Input file name")
+    parser.add_argument('--set', action='append', dest='set_vars',
+                        default=None,
+                        help="Set specific value from commandline.\nFollow format k=\"v\" to set key k as value v.\n(See description for accepted keys)")
+    args = parser.parse_args()
 
-    unpackage_theme(contents)
+    if (convert is None) and (set_vars is None):
+        print __doc__
+        parser.print_help()
+        sys.exit()
+    
+    print args
+
+    # unpackage_theme(contents)
