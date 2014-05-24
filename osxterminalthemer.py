@@ -198,15 +198,23 @@ def set_values(thm_json_string, args_set):
     # Apply set commands
     for k,v in set_dict.iteritems():
         if 'color' in k:
-            print k
+            try:
+                r,g,b = tuple(map(float, v.split(' ')))
+                if min(r,g,b) < 0 or max(r,g,b) > 1:
+                    raise Exception
+            except:
+                return None, "color value '%s' must be in format 'float float float' in range 0 to 1. See --help" % (v)
+
+            str_rgb = "%f %f %f\x00" % (r,g,b)
+            mapped_key = set_key_mapping[k]
+            thm_json[mapped_key]['data']['$objects'][1]['NSRGB']['data'] = str_rgb
         else:
             try:
                 font_name = v.split(' ')[:-1]
                 font_size = float(v.split(' ')[-1])
             except Exception:
-                return None, "font value must be in format key=\"Font Name Size\"\nSee --help"
+                return None, "font value '%s' must be in format 'Font Name Size'\nSee --help" % (v)
 
-            print font_size, font_name
             thm_json['Font']['data']['$objects'][1]['NSSize'] = font_size
             thm_json['Font']['data']['$objects'][2] = font_name
 
@@ -266,7 +274,7 @@ if __name__ == '__main__':
 
         tmp_thm_data, set_error = set_values(tmp_thm_data, args.set_vars)
         if set_error is not None:
-            print set_return
+            print 'ERROR:', set_error
             sys.exit(1)
 
         thm_data = repackage_theme(tmp_thm_data)
