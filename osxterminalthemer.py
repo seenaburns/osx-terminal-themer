@@ -173,13 +173,16 @@ def repackage_theme(json_string):
 
     return plistlib.writePlistToString(theme_json)
 
-def set_values(json, args_set):
+def set_values(thm_json_string, args_set):
     # Change key value pairs of args_set in theme json
     # args_set is list of set commands of format k=v
     # 
-    # On success: return None
-    # On failure: error reason
+    # Return
+    #   success: (modified theme, None)
+    #   failure: (None, error message)
+    thm_json = json.loads(thm_json_string)
 
+    # Parse set commands
     set_dict = {}
     for set_cmd in args_set:
         try:
@@ -187,14 +190,27 @@ def set_values(json, args_set):
             k = k.lower()
             set_dict[k] = v
         except Exception:
-            return "'--set %s' bad format (should be k=v)" % (set_cmd)
+            return None, "'--set %s' bad format (should be k=v)" % (set_cmd)
     
         if k not in set_key_mapping.keys():
-            return "'%s' not an accepted --set key, see --help" % (k)
+            return None, "'%s' not an accepted --set key, see --help" % (k)
 
-    print set_dict
+    # Apply set commands
+    for k,v in set_dict.iteritems():
+        if 'color' in k:
+            print k
+        else:
+            try:
+                font_name = v.split(' ')[:-1]
+                font_size = float(v.split(' ')[-1])
+            except Exception:
+                return None, "font value must be in format key=\"Font Name Size\"\nSee --help"
 
-    return None
+            print font_size, font_name
+            thm_json['Font']['data']['$objects'][1]['NSSize'] = font_size
+            thm_json['Font']['data']['$objects'][2] = font_name
+
+    return json.dumps(thm_json), None
 
 if __name__ == '__main__':
     # Setup argument parser
@@ -248,8 +264,8 @@ if __name__ == '__main__':
     if args.set_vars is not None:
         tmp_thm_data = unpackage_theme(thm_data)
 
-        set_return = set_values(tmp_thm_data, args.set_vars)
-        if set_return is not None:
+        tmp_thm_data, set_error = set_values(tmp_thm_data, args.set_vars)
+        if set_error is not None:
             print set_return
             sys.exit(1)
 
