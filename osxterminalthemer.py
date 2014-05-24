@@ -7,6 +7,14 @@ DESCRIPTION
   - Set specific settings from the command line
 
 """
+examples_doc = """
+EXAMPLES
+  python osxterminalthemer.py --convert json < theme.terminal
+
+  python osxterminalthemer.py \\
+    --set blackColor="0.0 0.0 0.0" \\
+    --set blueColor="0.0 0.0 0.5"
+"""
 
 import sys
 import subprocess
@@ -14,28 +22,75 @@ import plistlib
 import json
 import argparse
 
-bplist_keys = ['ANSIBlackColor',
-               'ANSIBlueColor',
-               'ANSICyanColor',
-               'ANSIGreenColor',
-               'ANSIMagentaColor',
-               'ANSIRedColor',
-               'ANSIWhiteColor',
-               'ANSIYellowColor',
-               'ANSIBrightBlackColor',
-               'ANSIBrightBlueColor',
-               'ANSIBrightCyanColor',
-               'ANSIBrightGreenColor',
-               'ANSIBrightMagentaColor',
-               'ANSIBrightRedColor',
-               'ANSIBrightWhiteColor',
-               'ANSIBrightYellowColor',
-               'BackgroundColor',
-               'SelectionColor',
-               'TextColor',
-               'TextBoldColor',
-               'CursorColor',
-               'Font']
+bplist_keys = [
+    'ANSIBlackColor',
+    'ANSIBlueColor',
+    'ANSICyanColor',
+    'ANSIGreenColor',
+    'ANSIMagentaColor',
+    'ANSIRedColor',
+    'ANSIWhiteColor',
+    'ANSIYellowColor',
+    'ANSIBrightBlackColor',
+    'ANSIBrightBlueColor',
+    'ANSIBrightCyanColor',
+    'ANSIBrightGreenColor',
+    'ANSIBrightMagentaColor',
+    'ANSIBrightRedColor',
+    'ANSIBrightWhiteColor',
+    'ANSIBrightYellowColor',
+    'BackgroundColor',
+    'SelectionColor',
+    'TextColor',
+    'TextBoldColor',
+    'CursorColor',
+    'Font'
+]
+
+# Map accepted set keys to their key in json
+# Font has special case
+set_key_mapping = {
+    'blackcolor': 'ANSIBlackColor',
+    'bluecolor': 'ANSIBlueColor',
+    'cyancolor': 'ANSICyanColor',
+    'greencolor': 'ANSIGreenColor',
+    'magentacolor': 'ANSIMagentaColor',
+    'redcolor': 'ANSIRedColor',
+    'whitecolor': 'ANSIWhiteColor',
+    'yellowcolor': 'ANSIYellowColor',
+    'brightblackcolor': 'ANSIBrightBlackColor',
+    'brightbluecolor': 'ANSIBrightBlueColor',
+    'brightcyancolor': 'ANSIBrightCyanColor',
+    'brightgreencolor': 'ANSIBrightGreenColor',
+    'brightmagentacolor': 'ANSIBrightMagentaColor',
+    'brightredcolor': 'ANSIBrightRedColor',
+    'brightwhitecolor': 'ANSIBrightWhiteColor',
+    'brightyellowcolor': 'ANSIBrightYellowColor',
+    'backgroundcolor': 'BackgroundColor',
+    'selectioncolor': 'SelectionColor',
+    'textcolor': 'TextColor',
+    'textboldcolor': 'TextBoldColor',
+    'cursorcolor': 'CursorColor',
+    'font': 'Font'
+}
+set_keys_doc = """
+--set keys
+
+  COLORS
+    Take format --set key="color" where color is an RGB float (0 to 1) value
+    example: --set key="0.5 0.2 .03"
+
+    %s
+
+  FONTS
+    Take format --set key="FontName Size"
+    example: --set font="Monaco 10.0"
+
+    font
+
+""" % ('\n    '.join([x for x in set_key_mapping.keys() if 'color' in x]))
+
+
 
 def bplist_to_xml(data):
     cmd = "plutil -convert xml1 - -o -"
@@ -118,8 +173,28 @@ def repackage_theme(json_string):
 
     return plistlib.writePlistToString(theme_json)
 
-def set_values(args_set):
-    pass
+def set_values(json, args_set):
+    # Change key value pairs of args_set in theme json
+    # args_set is list of set commands of format k=v
+    # 
+    # On success: return None
+    # On failure: error reason
+
+    set_dict = {}
+    for set_cmd in args_set:
+        try:
+            k, v = set_cmd.split('=')
+            k = k.lower()
+            set_dict[k] = v
+        except Exception:
+            return "'--set %s' bad format (should be k=v)" % (set_cmd)
+    
+        if k not in set_key_mapping.keys():
+            return "'%s' not an accepted --set key, see --help" % (k)
+
+    print set_dict
+
+    return None
 
 if __name__ == '__main__':
     # Setup argument parser
@@ -127,6 +202,7 @@ if __name__ == '__main__':
     #   usage text properly (enable __doc__ newlines, wider printing)
     parser = argparse.ArgumentParser(
         description=__doc__,
+        epilog=set_keys_doc + examples_doc,
         prog='osxterminalthemer.py',
         formatter_class= \
           lambda prog: argparse.RawTextHelpFormatter(prog,2,72))
@@ -171,7 +247,12 @@ if __name__ == '__main__':
     # First set values in case both convert and set
     if args.set_vars is not None:
         tmp_thm_data = unpackage_theme(thm_data)
-        set_values(tmp_thm_data)
+
+        set_return = set_values(tmp_thm_data, args.set_vars)
+        if set_return is not None:
+            print set_return
+            sys.exit(1)
+
         thm_data = repackage_theme(tmp_thm_data)
 
     if args.convert is not None:
