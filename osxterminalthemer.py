@@ -118,6 +118,9 @@ def repackage_theme(json_string):
 
     return plistlib.writePlistToString(theme_json)
 
+def set_values(args_set):
+    pass
+
 if __name__ == '__main__':
     # Setup argument parser
     # Set formatter class to be RawTextHelper with wider fill to format
@@ -158,17 +161,24 @@ if __name__ == '__main__':
         sys.exit()
 
     # Extract contents either from input file or stdin
-    in_data = ""
+    thm_data = ""
     if args.in_file is not None:
         with open(args.in_file, 'r') as f:
-            in_data = f.read()
+            thm_data = f.read()
     else:
-        in_data = sys.stdin.read()
+        thm_data = sys.stdin.read()
+
+    # First set values in case both convert and set
+    if args.set_vars is not None:
+        tmp_thm_data = unpackage_theme(thm_data)
+        set_values(tmp_thm_data)
+        thm_data = repackage_theme(tmp_thm_data)
 
     if args.convert is not None:
         if args.convert == "json":            
-            sys.stdout.write(unpackage_theme(in_data))
+            thm_data = unpackage_theme(thm_data)
 
         if args.convert == "terminal":
-            sys.stdout.write(repackage_theme(in_data))
-    
+            thm_data = repackage_theme(thm_data)
+            
+    sys.stdout.write(thm_data)
